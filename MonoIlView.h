@@ -24,6 +24,8 @@
 
 namespace Mono
 {
+    class Debugger;
+
     class IlView : public QTreeWidget
     {
         Q_OBJECT
@@ -37,16 +39,19 @@ namespace Mono
         };
         enum { MainMax = 0xe0, FeMax = 0x1e };
         enum ArgType {
-            Invalid, NoArg, Rel1, Rel4, Index1, Index2, Index4,
-            Immed1, Immed4, Immed8, Float4, Float8, Switch
+            Invalid, NoArg, Off8, Off32, Uint8, Uint16, Uint32,
+            Int8, Int32, Int64, Float32, Float64, Switch,
+            Token
         };
         static const Opcode s_main[];
         static const Opcode s_fe[];
 
-        explicit IlView(QWidget *parent = 0);
+        explicit IlView(QWidget *parent = 0, Debugger* = 0);
 
         bool load(const QByteArray& bytecode, int curOff = -1);
-
+        bool load( quint32 methodId, int curOff = -1 );
+    private:
+        Debugger* d_dbg;
     };
 }
 

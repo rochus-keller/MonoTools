@@ -801,6 +801,30 @@ quint16 Debugger::getParamCount(quint32 methodId)
     return 0;
 }
 
+QByteArrayList Debugger::getParamNames(quint32 methodId)
+{
+    QByteArray data(4,0);
+    writeUint32(data.data(),methodId);
+    Reply r = sendReceive(CMD_SET_METHOD, CMD_METHOD_GET_PARAM_INFO,data);
+    QByteArrayList res;
+    if( r.isOk() )
+    {
+        quint32 count;
+        readUint32(r.d_data,4,count);
+        int off = 8 // calling convention + param count
+                + 4 // generic parameter count
+                + 4 // TypeID of the returned value
+                + count * 4; // parameter count TypeID for each parameter type
+        for( int i = 0; i < count; i++ )
+        {
+            QByteArray name;
+            off += readString(r.d_data,off,name);
+            res << name;
+        }
+    }
+    return res;
+}
+
 quint16 Debugger::getLocalsCount(quint32 methodId)
 {
     QByteArray data(4,0);
@@ -813,6 +837,27 @@ quint16 Debugger::getLocalsCount(quint32 methodId)
         return count;
     }
     return 0;
+}
+
+QByteArrayList Debugger::getLocalNames(quint32 methodId)
+{
+    QByteArray data(4,0);
+    writeUint32(data.data(),methodId);
+    Reply r = sendReceive(CMD_SET_METHOD, CMD_METHOD_GET_LOCALS_INFO,data);
+    QByteArrayList res;
+    if( r.isOk() )
+    {
+        quint32 count;
+        readUint32(r.d_data,0,count);
+        int off = 4 + count * 4; // followed by the TypeID (id) for each locals
+        for( int i = 0; i < count; i++ )
+        {
+            QByteArray name;
+            off += readString(r.d_data,off,name);
+            res << name;
+        }
+    }
+    return res;
 }
 
 Debugger::TypeInfo Debugger::getTypeInfo(quint32 typeId)
@@ -871,6 +916,51 @@ quint32 Debugger::getObjectType(quint32 objId)
     if( r.isOk() )
         return readUint32(r.d_data.constData());
     return 0;
+}
+
+QList<Debugger::FieldInfo> Debugger::getFields(quint32 typeId)
+{
+    QByteArray data(4,0);
+    writeUint32(data.data(),typeId);
+    Reply r = sendReceive(CMD_SET_TYPE, CMD_TYPE_GET_FIELDS,data);
+    QList<Debugger::FieldInfo> res;
+    if( r.isOk() )
+    {
+        int off = 0;
+        quint32 count;
+        off += readUint32(r.d_data,off,count);
+        for( int i = 0; i < count; i++ )
+        {
+            FieldInfo field;
+            off += readUint32(r.d_data,off,field.id);
+            off += readString(r.d_data,off,field.name);
+            off += 8; // skip type and attributes
+            res << field;
+        }
+    }
+    return res;
+}
+
+QVariantList Debugger::getValues(quint32 objectId, const QList<quint32>& fieldIds)
+{
+    QByteArray data(4 + 4 + 4 * fieldIds.size() ,0);
+    writeUint32(data.data(),objectId);
+    writeUint32(data.data()+4, fieldIds.size());
+    for( int i = 0; i < fieldIds.size(); i++ )
+        writeUint32(data.data()+8+i*4, fieldIds[i]);
+    Reply r = sendReceive(CMD_SET_OBJECT_REF, CMD_OBJECT_REF_GET_VALUES,data);
+    QVariantList res;
+    if( r.isOk() )
+    {
+        int off = 0;
+        for( int i = 0; i < fieldIds.size(); i++ )
+        {
+            QVariant var;
+            readValue(r.d_data,off,var);
+            res << var;
+        }
+    }
+    return res;
 }
 
 void Debugger::onNewConnection()
@@ -1274,4 +1364,13 @@ Debugger::MethodDbgInfo::Loc Debugger::MethodDbgInfo::find(quint32 iloff) const
     res.iloff = 0;
     res.valid = false;
     return res;
+}
+
+
+QByteArray Debugger::TypeInfo::spaceName() const
+{
+    if( space.isEmpty() )
+        return name;
+    else
+        return space + "." + name;
 }

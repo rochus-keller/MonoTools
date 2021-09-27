@@ -111,7 +111,9 @@ namespace Mono
         enum MethodKind { IL, Native, Runtime };
         MethodKind getMethodKind(quint32 methodId);
         quint16 getParamCount(quint32 methodId);
+        QByteArrayList getParamNames(quint32 methodId);
         quint16 getLocalsCount(quint32 methodId);
+        QByteArrayList getLocalNames(quint32 methodId);
 
         struct TypeInfo
         {
@@ -121,10 +123,18 @@ namespace Mono
             quint32 assembly;
             quint32 module;
             quint32 id;
+            QByteArray spaceName() const;
         };
         TypeInfo getTypeInfo(quint32 typeId);
         QList<quint32> getMethods(quint32 typeId, const QByteArray& name = QByteArray());
         quint32 getObjectType(quint32 objId);
+        struct FieldInfo
+        {
+            quint32 id;
+            QByteArray name;
+        };
+        QList<FieldInfo> getFields(quint32 typeId);
+        QVariantList getValues(quint32 objectId, const QList<quint32>& fieldIds);
 
     signals:
         void sigError( const QString& );

@@ -33,7 +33,7 @@ namespace Mono
     public:
         explicit MdbGen(QObject *parent = 0);
         ~MdbGen();
-        bool write( const QString& filePath, DotNetPELib::PELib* );
+        bool write( const QString& filePath, DotNetPELib::PELib*, const QByteArrayList& skipNames );
     private:
         class Imp;
         Imp* d_imp;

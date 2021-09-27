@@ -18,6 +18,7 @@
 */
 
 #include "MonoIlView.h"
+#include "MonoDebugger.h"
 #include <QHeaderView>
 using namespace Mono;
 
@@ -63,9 +64,9 @@ const IlView::Opcode IlView::s_main[] = {
 { 0, 0x0, 0, 0 },
 { "dup", 0x25, 1, 1 },
 { "pop", 0x26, 1, 1 },
-{ "jmp", 0x27, 5, 6 },
-{ "call", 0x28, 5, 6 },
-{ "calli", 0x29, 5, 6 },
+{ "jmp", 0x27, 5, IlView::Token },
+{ "call", 0x28, 5, IlView::Token },
+{ "calli", 0x29, 5, IlView::Token },
 { "ret", 0x2a, 1, 1 },
 { "br.s", 0x2b, 2, 2 },
 { "brzero.s", 0x2c, 2, 2 },
@@ -135,25 +136,25 @@ const IlView::Opcode IlView::s_main[] = {
 { "conv.r8", 0x6c, 1, 1 },
 { "conv.u4", 0x6d, 1, 1 },
 { "conv.u8", 0x6e, 1, 1 },
-{ "callvirt", 0x6f, 5, 6 },
-{ "cpobj", 0x70, 5, 6 },
-{ "ldobj", 0x71, 5, 6 },
-{ "ldstr", 0x72, 5, 6 },
-{ "newobj", 0x73, 5, 6 },
-{ "castclass", 0x74, 5, 6 },
-{ "isinst", 0x75, 5, 6 },
+{ "callvirt", 0x6f, 5, IlView::Token },
+{ "cpobj", 0x70, 5, IlView::Token },
+{ "ldobj", 0x71, 5, IlView::Token },
+{ "ldstr", 0x72, 5, IlView::Token },
+{ "newobj", 0x73, 5, IlView::Token },
+{ "castclass", 0x74, 5, IlView::Token },
+{ "isinst", 0x75, 5, IlView::Token },
 { "conv.r.un", 0x76, 1, 1 },
 { 0, 0x0, 0, 0 },
 { 0, 0x0, 0, 0 },
-{ "unbox", 0x79, 5, 6 },
+{ "unbox", 0x79, 5, IlView::Token },
 { "throw", 0x7a, 1, 1 },
-{ "ldfld", 0x7b, 5, 6 },
-{ "ldflda", 0x7c, 5, 6 },
-{ "stfld", 0x7d, 5, 6 },
-{ "ldsfld", 0x7e, 5, 6 },
-{ "ldsflda", 0x7f, 5, 6 },
-{ "stsfld", 0x80, 5, 6 },
-{ "stobj", 0x81, 5, 6 },
+{ "ldfld", 0x7b, 5, IlView::Token },
+{ "ldflda", 0x7c, 5, IlView::Token },
+{ "stfld", 0x7d, 5, IlView::Token },
+{ "ldsfld", 0x7e, 5, IlView::Token },
+{ "ldsflda", 0x7f, 5, IlView::Token },
+{ "stsfld", 0x80, 5, IlView::Token },
+{ "stobj", 0x81, 5, IlView::Token },
 { "conv.ovf.i1.un", 0x82, 1, 1 },
 { "conv.ovf.i2.un", 0x83, 1, 1 },
 { "conv.ovf.i4.un", 0x84, 1, 1 },
@@ -164,10 +165,10 @@ const IlView::Opcode IlView::s_main[] = {
 { "conv.ovf.u8.un", 0x89, 1, 1 },
 { "conv.ovf.i.un", 0x8a, 1, 1 },
 { "conv.ovf.u.un", 0x8b, 1, 1 },
-{ "box", 0x8c, 5, 6 },
-{ "newarr", 0x8d, 5, 6 },
+{ "box", 0x8c, 5, IlView::Token },
+{ "newarr", 0x8d, 5, IlView::Token },
 { "ldlen", 0x8e, 1, 1 },
-{ "ldelema", 0x8f, 5, 6 },
+{ "ldelema", 0x8f, 5, IlView::Token },
 { "ldelem.i1", 0x90, 1, 1 },
 { "ldelem.u1", 0x91, 1, 1 },
 { "ldelem.i2", 0x92, 1, 1 },
@@ -187,9 +188,9 @@ const IlView::Opcode IlView::s_main[] = {
 { "stelem.r4", 0xa0, 1, 1 },
 { "stelem.r8", 0xa1, 1, 1 },
 { "stelem.ref", 0xa2, 1, 1 },
-{ "ldelem", 0xa3, 5, 6 },
-{ "stelem", 0xa4, 5, 6 },
-{ "unbox.any", 0xa5, 5, 6 },
+{ "ldelem", 0xa3, 5, IlView::Token },
+{ "stelem", 0xa4, 5, IlView::Token },
+{ "unbox.any", 0xa5, 5, IlView::Token },
 { 0, 0x0, 0, 0 },
 { 0, 0x0, 0, 0 },
 { 0, 0x0, 0, 0 },
@@ -218,11 +219,11 @@ const IlView::Opcode IlView::s_main[] = {
 { 0, 0x0, 0, 0 },
 { 0, 0x0, 0, 0 },
 { 0, 0x0, 0, 0 },
-{ "refanyval", 0xc2, 5, 6 },
+{ "refanyval", 0xc2, 5, IlView::Token },
 { "ckfinite", 0xc3, 1, 1 },
 { 0, 0x0, 0, 0 },
 { 0, 0x0, 0, 0 },
-{ "mkrefany", 0xc6, 5, 6 },
+{ "mkrefany", 0xc6, 5, IlView::Token },
 { 0, 0x0, 0, 0 },
 { 0, 0x0, 0, 0 },
 { 0, 0x0, 0, 0 },
@@ -232,7 +233,7 @@ const IlView::Opcode IlView::s_main[] = {
 { 0, 0x0, 0, 0 },
 { 0, 0x0, 0, 0 },
 { 0, 0x0, 0, 0 },
-{ "ldtoken", 0xd0, 5, 6 },
+{ "ldtoken", 0xd0, 5, IlView::Token },
 { "conv.u2", 0xd1, 1, 1 },
 { "conv.u1", 0xd2, 1, 1 },
 { "conv.i", 0xd3, 1, 1 },
@@ -259,8 +260,8 @@ const IlView::Opcode IlView::s_fe[] = {
 { "cgt.un", 0x3, 2, 1 },
 { "clt", 0x4, 2, 1 },
 { "clt.un", 0x5, 2, 1 },
-{ "ldftn", 0x6, 6, 6 },
-{ "ldvirtftn", 0x7, 6, 6 },
+{ "ldftn", 0x6, 6, IlView::Token },
+{ "ldvirtftn", 0x7, 6, IlView::Token },
 { 0, 0x0, 0, 0 },
 { "ldarg", 0x9, 4, 5 },
 { "ldarga", 0xa, 4, 5 },
@@ -274,28 +275,24 @@ const IlView::Opcode IlView::s_fe[] = {
 { 0, 0x0, 0, 0 },
 { 0, 0x0, 0, 0 },
 { "tail.", 0x14, 2, 1 },
-{ "initobj", 0x15, 6, 6 },
-{ "constrained.", 0x16, 6, 6 },
+{ "initobj", 0x15, 6, IlView::Token },
+{ "constrained.", 0x16, 6, IlView::Token },
 { "endfilter", 0x17, 2, 1 },
 { "initblk", 0x18, 2, 1 },
 { "no.", 0x19, 3, 7 },
 { "rethrow", 0x1a, 2, 1 },
 { 0, 0x0, 0, 0 },
-{ "sizeof", 0x1c, 6, 6 },
+{ "sizeof", 0x1c, 6, IlView::Token },
 { "refanytype", 0x1d, 2, 1 },
 { "readonly.", 0x1e, 2, 1 },
 };
 
-IlView::IlView(QWidget *parent) : QTreeWidget(parent)
+static inline quint64 readUint64( const char* buf )
 {
-    setHeaderHidden(false);
-    setAlternatingRowColors(true);
-    setRootIsDecorated(false);
-    setColumnCount(4);
-    setExpandsOnDoubleClick(false);
-    setHeaderLabels( QStringList() << "IL" << "Off" << "Nr" << "Arg" );
-    header()->setStretchLastSection(false);
-    header()->setSectionResizeMode(0,QHeaderView::Stretch);
+    return (((quint8)buf[0]) << 56) | (((quint8)buf[1]) << 48) |
+            (((quint8)buf[2]) << 40) | (((quint8)buf[3]) << 32) |
+            (((quint8)buf[4]) << 24) | (((quint8)buf[5]) << 16) |
+            (((quint8)buf[6]) << 8) | (((quint8)buf[7]) << 0);
 
 }
 
@@ -306,11 +303,28 @@ static inline quint32 readUint32( const char* buf )
 
 }
 
+static quint16 readUint16( const char* buf )
+{
+    return (((quint8)buf[0]) << 8) | (((quint8)buf[1]) << 0);
+}
+
+IlView::IlView(QWidget *parent, Debugger* dbg) : QTreeWidget(parent),d_dbg(dbg)
+{
+    setHeaderHidden(false);
+    setAlternatingRowColors(true);
+    setRootIsDecorated(false);
+    setColumnCount(4);
+    setExpandsOnDoubleClick(false);
+    setHeaderLabels( QStringList() << "IL" << "Pos" << "Line" << "Arg" );
+    header()->setStretchLastSection(false);
+    header()->setSectionResizeMode(0,QHeaderView::Stretch);
+
+}
+
 bool IlView::load(const QByteArray& bytecode, int curOff)
 {
     clear();
     int i = 0;
-    int nr = 0;
     QTreeWidgetItem* focus = 0;
     while( i < bytecode.size() )
     {
@@ -333,8 +347,7 @@ bool IlView::load(const QByteArray& bytecode, int curOff)
 
         QTreeWidgetItem* item = new QTreeWidgetItem(this);
         item->setText(0, il->sym );
-        item->setText(1, QString("IL_%1").arg(i,4,16,QChar('0')) );
-        item->setText(2, QString::number(nr) );
+        item->setText(1, QString("%1").arg(i,4,16,QChar('0')) );
 
         if( curOff >= 0 && curOff == i )
         {
@@ -342,7 +355,118 @@ bool IlView::load(const QByteArray& bytecode, int curOff)
             focus = item;
         }
 
-        // TODO arg
+        if( op == 0x45 ) // special case
+        {
+            const int len = readUint32( bytecode.constData()+i+1 );
+            i += 5 + len * 4;
+        }else
+            i += il->len;
+    }
+    if( focus )
+    {
+        scrollToItem(focus,QAbstractItemView::EnsureVisible);
+        setCurrentItem(focus);
+        focus->setSelected(true);
+    }
+    resizeColumnToContents(1);
+    resizeColumnToContents(2);
+    return true;
+}
+
+static QVariant toVal( const IlView::Opcode* op, const char* data )
+{
+    switch( op->argtype )
+    {
+    case IlView::Invalid:
+    case IlView::NoArg:
+        break;
+    case IlView::Off8:
+        return (int)(*data);
+    case IlView::Off32:
+        return (qint32)readUint32(data);
+    case IlView::Uint8:
+        return (quint8)(*data);
+    case IlView::Uint16:
+        return readUint16(data);
+    case IlView::Uint32:
+        return readUint32(data);
+    case IlView::Int8:
+        return (qint8)*data;
+    case IlView::Int32:
+        return (qint32)readUint32(data);
+    case IlView::Int64:
+        return (qint64)readUint64(data);
+    case IlView::Float32:
+        {
+            const quint32 v = readUint32(data);
+            return *(float*)&v;
+        }
+    case IlView::Float64:
+        {
+            const quint64 v = readUint64(data);
+            return *(double*)&v;
+        }
+    case IlView::Token:
+        // TODO improve
+        return QString("0x%1").arg(readUint32(data));
+
+    case IlView::Switch:
+        break;
+    }
+
+    return QVariant();
+}
+
+bool IlView::load(quint32 methodId, int curOff)
+{
+    if( d_dbg == 0 )
+        return false;
+
+    clear();
+
+    const QByteArray bytecode = d_dbg->getMethodBody(methodId);
+    Debugger::MethodDbgInfo info = d_dbg->getMethodInfo(methodId);
+
+    int i = 0;
+    QTreeWidgetItem* focus = 0;
+    while( i < bytecode.size() )
+    {
+        const quint8 op = (quint8)bytecode[i];
+        const Opcode* il;
+        if( op == 0xfe )
+        {
+            const quint8 op2 = (quint8)bytecode[i+1];
+            if( op2 > FeMax )
+                return false;
+            il = &s_fe[op2];
+        }else
+        {
+            if( op > MainMax )
+                return false;
+            il = &s_main[op];
+        }
+        if( il->sym == 0 )
+            return false;
+
+        QTreeWidgetItem* item = new QTreeWidgetItem(this);
+        item->setText(0, il->sym );
+        item->setText(1, QString("%1").arg(i,4,16,QChar('0')) );
+        Debugger::MethodDbgInfo::Loc loc = info.find(i);
+        if( loc.valid )
+        {
+            if( loc.col > 0 )
+                item->setText(2, QString("%1:%2").arg(loc.row).arg(loc.col) );
+            else
+                item->setText(2, QString::number(loc.row) );
+        }
+
+        if( curOff >= 0 && curOff == i )
+        {
+            item->setIcon(0, QPixmap(":/images/marker.png"));
+            focus = item;
+        }
+
+        item->setText(3, toVal(il,bytecode.constData()+i+1).toString() );
 
         if( op == 0x45 ) // special case
         {
@@ -350,7 +474,6 @@ bool IlView::load(const QByteArray& bytecode, int curOff)
             i += 5 + len * 4;
         }else
             i += il->len;
-        nr++;
     }
     if( focus )
     {
