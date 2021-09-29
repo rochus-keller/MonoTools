@@ -58,14 +58,20 @@ namespace Mono
         quint16 open(quint16 port = 0);
         bool close();
         bool isOpen() const;
+
         bool resume();
-        bool suspend();
-        bool exit();
         bool stepIn(quint32 threadId, bool nextLine = false);
         bool stepOver(quint32 threadId, bool nextLine = false);
         bool stepOut(quint32 threadId, bool nextLine = false);
+        bool suspend();
+        bool exit();
+
         bool enableUserBreak();
         bool callUserBreak(quint32 threadId); // doesn't work
+
+        bool addBreakpoint(quint32 methodId, quint32 iloffset ); // method-id cannot be zero in Mono3
+        bool removeBreakpoint(quint32 methodId, quint32 iloffset );
+        bool clearAllBreakpoints();
 
         QList<quint32> allThreads();
         QByteArray getThreadName(quint32 threadId);
@@ -74,7 +80,11 @@ namespace Mono
         ThreadState getThreadState(quint32 threadId);
 
         quint32 getCoreLib(quint32 domainId); // assemblyId
+
         QList<quint32> findType( const QByteArray& name );
+        quint32 findType( const QByteArray& name, quint32 assemblyId );
+        // name follows https://docs.microsoft.com/en-us/dotnet/api/system.type.assemblyqualifiedname
+        QList<quint32> getTypesOf( const QString& sourcePath );
 
         struct Frame
         {
@@ -101,6 +111,7 @@ namespace Mono
             };
             QList<Loc> lines;
             Loc find(quint32 iloff) const;
+            quint32 find( quint32 row, qint16 col) const; // find first iloff
         };
         MethodDbgInfo getMethodInfo(quint32 methodId);
         QByteArray getMethodName(quint32 methodId);
@@ -135,6 +146,8 @@ namespace Mono
         };
         QList<FieldInfo> getFields(quint32 typeId);
         QVariantList getValues(quint32 objectId, const QList<quint32>& fieldIds);
+
+        QByteArray getAssemblyName(quint32 assemblyId);
 
     signals:
         void sigError( const QString& );
@@ -182,6 +195,7 @@ namespace Mono
         RunMode d_mode;
         quint32 d_modeReq;
         quint32 d_breakMeth;
+        QHash<QPair<quint32,quint32>,quint32> d_breakPoints; // meth,iloff->reqid
     };
 
     // possible results of Debugger::getValues:

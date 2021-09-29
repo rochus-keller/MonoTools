@@ -144,6 +144,18 @@ static inline void writeUint32( char* buf, quint32 val )
     buf[3] = (val >> 0) & 0xff;
 }
 
+static inline void writeUint64( char* buf, quint64 val )
+{
+    buf[0] = (val >> 56) & 0xff;
+    buf[1] = (val >> 48) & 0xff;
+    buf[2] = (val >> 40) & 0xff;
+    buf[3] = (val >> 32) & 0xff;
+    buf[4] = (val >> 24) & 0xff;
+    buf[5] = (val >> 16) & 0xff;
+    buf[6] = (val >> 8) & 0xff;
+    buf[7] = (val >> 0) & 0xff;
+}
+
 static QByteArray writeString( const QByteArray& str )
 {
     QByteArray res(4,0);
@@ -320,6 +332,56 @@ bool Debugger::callUserBreak(quint32 threadId)
     return r.isOk();
 }
 
+bool Debugger::addBreakpoint(quint32 methodId, quint32 iloffset)
+{
+    if( !isOpen() )
+        return false;
+
+    const QPair<quint32,quint32> key = qMakePair(methodId,iloffset);
+    if( d_breakPoints.contains(key) )
+        return true;
+    QByteArray data(3 + 1 + 12,0);
+    char* d = data.data();
+    d[0] = DebuggerEvent::BREAKPOINT;
+    d[1] = SUSPEND_POLICY_ALL;
+    d[2] = 1;
+    d[3] = MOD_KIND_LOCATION_ONLY;
+    writeUint32(d+4,methodId);
+    writeUint64(d+8, iloffset );
+    Reply r = sendReceive(CMD_SET_EVENT_REQUEST,CMD_EVENT_REQUEST_SET, data);
+    if( r.isOk() )
+    {
+        d_breakPoints.insert(key,readUint32(r.d_data));
+        return true;
+    }
+    return false;
+}
+
+bool Debugger::removeBreakpoint(quint32 methodId, quint32 iloffset)
+{
+    if( !isOpen() )
+        return false;
+
+    const QPair<quint32,quint32> key = qMakePair(methodId,iloffset);
+    if( !d_breakPoints.contains(key) )
+        return true;
+
+    QByteArray code(5,0);
+    code[0] = DebuggerEvent::BREAKPOINT;
+    writeUint32(code.data()+1, d_breakPoints.value(key));
+    if( !sendReceive(CMD_SET_EVENT_REQUEST,CMD_EVENT_REQUEST_CLEAR,code).isOk() )
+        return false;
+
+    d_breakPoints.remove(key);
+    return true;
+}
+
+bool Debugger::clearAllBreakpoints()
+{
+    Reply r = sendReceive(CMD_SET_EVENT_REQUEST,CMD_EVENT_REQUEST_CLEAR_ALL_BREAKPOINTS);
+    return r.isOk();
+}
+
 QList<quint32> Debugger::allThreads()
 {
     QList<quint32> res;
@@ -391,6 +453,40 @@ QList<quint32> Debugger::findType(const QByteArray& name)
     QByteArray data = writeString(name);
     data += '\0';
     Reply r = sendReceive(CMD_SET_VM, CMD_VM_GET_TYPES,data);
+    QList<quint32> res;
+    if( r.isOk() )
+    {
+        int off = 0;
+        quint32 len;
+        off += readUint32(r.d_data,off,len);
+        for( int i = 0; i < len; i++ )
+        {
+            quint32 t;
+            off += readUint32(r.d_data,off,t);
+            res << t;
+        }
+    }
+    return res;
+}
+
+quint32 Debugger::findType(const QByteArray& name, quint32 assemblyId)
+{
+    QByteArray data(4,0);
+    writeUint32(data.data(),assemblyId);
+    data += writeString(name);
+    data += '\0';
+    Reply r = sendReceive(CMD_SET_ASSEMBLY, CMD_ASSEMBLY_GET_TYPE,data);
+    if( r.isOk() )
+        return readUint32(r.d_data.constData());
+    else
+        return 0;
+}
+
+QList<quint32> Debugger::getTypesOf(const QString& sourcePath)
+{
+    QByteArray data = writeString(sourcePath.toUtf8());
+    data += '\0';
+    Reply r = sendReceive(CMD_SET_VM, CMD_VM_GET_TYPES_FOR_SOURCE_FILE,data);
     QList<quint32> res;
     if( r.isOk() )
     {
@@ -956,11 +1052,22 @@ QVariantList Debugger::getValues(quint32 objectId, const QList<quint32>& fieldId
         for( int i = 0; i < fieldIds.size(); i++ )
         {
             QVariant var;
-            readValue(r.d_data,off,var);
+            off += readValue(r.d_data,off,var);
             res << var;
         }
     }
     return res;
+}
+
+QByteArray Debugger::getAssemblyName(quint32 assemblyId)
+{
+    QByteArray data(4,0);
+    writeUint32(data.data(),assemblyId);
+    Reply r = sendReceive(CMD_SET_ASSEMBLY, CMD_ASSEMBLY_GET_NAME,data);
+    if( r.isOk() )
+        return readString(r.d_data.constData());
+    else
+        return QByteArray();
 }
 
 void Debugger::onNewConnection()
@@ -991,6 +1098,9 @@ void Debugger::onDisconnect()
     if( d_sock )
         d_sock->deleteLater();
     d_sock = 0;
+    d_breakPoints.clear();
+    d_modeReq = 0;
+    d_mode = FreeRun;
 }
 
 void Debugger::onData()
@@ -1083,6 +1193,13 @@ void Debugger::onInitialSetup(bool start)
     writeUint32(version.data(), MAJOR_VERSION);
     writeUint32(version.data() + 4, MINOR_VERSION);
     sendReceive(CMD_SET_VM,CMD_VM_SET_PROTOCOL_VERSION, version );
+
+    QByteArray event(3,0);
+    event[0] = DebuggerEvent::ASSEMBLY_LOAD;
+    event[1] = SUSPEND_POLICY_NONE;
+    event[2] = 0;
+    sendReceive(CMD_SET_EVENT_REQUEST,CMD_EVENT_REQUEST_SET, event);
+
 
 #if 0
     // not useful
@@ -1364,6 +1481,16 @@ Debugger::MethodDbgInfo::Loc Debugger::MethodDbgInfo::find(quint32 iloff) const
     res.iloff = 0;
     res.valid = false;
     return res;
+}
+
+quint32 Debugger::MethodDbgInfo::find(quint32 row, qint16 col) const
+{
+    for( int i = 0; i < lines.size(); i++ )
+    {
+        if( lines[i].row >= row )
+            return lines[i].iloff;
+    }
+    return 0;
 }
 
 
