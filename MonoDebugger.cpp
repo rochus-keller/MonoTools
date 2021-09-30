@@ -978,6 +978,16 @@ Debugger::TypeInfo Debugger::getTypeInfo(quint32 typeId)
     return res;
 }
 
+quint32 Debugger::getTypeObject(quint32 typeId)
+{
+    QByteArray data(4,0);
+    writeUint32(data.data(),typeId);
+    Reply r = sendReceive(CMD_SET_TYPE, CMD_TYPE_GET_OBJECT,data);
+    if( r.isOk() )
+        return readUint32(r.d_data.constData());
+    return 0;
+}
+
 QList<quint32> Debugger::getMethods(quint32 typeId, const QByteArray& name)
 {
     QByteArray data(4,0);
@@ -995,7 +1005,8 @@ QList<quint32> Debugger::getMethods(quint32 typeId, const QByteArray& name)
             off += readUint32(r.d_data,off,m);
             if( !name.isEmpty() )
             {
-                if( name == getMethodName(m) )
+                const QByteArray check = getMethodName(m);
+                if( name == check )
                     res << m;
             }else
                 res << m;
@@ -1014,7 +1025,7 @@ quint32 Debugger::getObjectType(quint32 objId)
     return 0;
 }
 
-QList<Debugger::FieldInfo> Debugger::getFields(quint32 typeId)
+QList<Debugger::FieldInfo> Debugger::getFields(quint32 typeId, bool instanceLevel, bool classLevel)
 {
     QByteArray data(4,0);
     writeUint32(data.data(),typeId);
@@ -1030,21 +1041,31 @@ QList<Debugger::FieldInfo> Debugger::getFields(quint32 typeId)
             FieldInfo field;
             off += readUint32(r.d_data,off,field.id);
             off += readString(r.d_data,off,field.name);
-            off += 8; // skip type and attributes
-            res << field;
+            off += 4; // skip type
+            quint32 attrs;
+            off += readUint32(r.d_data,off,attrs);
+            const bool isStatic = attrs & FIELD_ATTRIBUTE_STATIC;
+            if( isStatic )
+                qDebug() << "static field" << field.name;
+            if( ( instanceLevel && !isStatic ) || ( classLevel && isStatic ) )
+                res << field;
         }
     }
     return res;
 }
 
-QVariantList Debugger::getValues(quint32 objectId, const QList<quint32>& fieldIds)
+QVariantList Debugger::getValues(quint32 objectOrTypeId, const QList<quint32>& fieldIds, bool typeLevel)
 {
     QByteArray data(4 + 4 + 4 * fieldIds.size() ,0);
-    writeUint32(data.data(),objectId);
+    writeUint32(data.data(),objectOrTypeId);
     writeUint32(data.data()+4, fieldIds.size());
     for( int i = 0; i < fieldIds.size(); i++ )
         writeUint32(data.data()+8+i*4, fieldIds[i]);
-    Reply r = sendReceive(CMD_SET_OBJECT_REF, CMD_OBJECT_REF_GET_VALUES,data);
+    Reply r;
+    if( typeLevel )
+        r = sendReceive(CMD_SET_TYPE, CMD_TYPE_GET_VALUES,data);
+    else
+        r = sendReceive(CMD_SET_OBJECT_REF, CMD_OBJECT_REF_GET_VALUES,data);
     QVariantList res;
     if( r.isOk() )
     {

@@ -137,6 +137,7 @@ namespace Mono
             QByteArray spaceName() const;
         };
         TypeInfo getTypeInfo(quint32 typeId);
+        quint32 getTypeObject(quint32 typeId);
         QList<quint32> getMethods(quint32 typeId, const QByteArray& name = QByteArray());
         quint32 getObjectType(quint32 objId);
         struct FieldInfo
@@ -144,8 +145,8 @@ namespace Mono
             quint32 id;
             QByteArray name;
         };
-        QList<FieldInfo> getFields(quint32 typeId);
-        QVariantList getValues(quint32 objectId, const QList<quint32>& fieldIds);
+        QList<FieldInfo> getFields(quint32 typeId, bool instanceLevel = true, bool classLevel = true);
+        QVariantList getValues(quint32 objectOrTypeId, const QList<quint32>& fieldIds, bool typeLevel = false);
 
         QByteArray getAssemblyName(quint32 assemblyId);
 

@@ -311,5 +311,7 @@ enum ErrorCode {
 #define METHOD_ATTRIBUTE_STATIC                    0x0010
 #define METHOD_ATTRIBUTE_VIRTUAL                   0x0040
 
+#define FIELD_ATTRIBUTE_STATIC                0x0010
+
 #endif // MONODEBUGGERPRIVATE
 
