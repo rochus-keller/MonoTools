@@ -169,11 +169,17 @@ void Engine::run(const QString& assembly, const QStringList& args)
 
     const QString monoDir = getMonoDir();
     QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
-    QString searchPath = d_searchPaths.join(':');
+#ifdef Q_OS_WIN
+    const QChar separator(';');
+#else
+    const QChar separator(':');
+#endif
+    QString searchPath = d_searchPaths.join(separator);
     if( !searchPath.isEmpty() )
-        searchPath += ":";
+        searchPath += separator;
     searchPath += monoDir;
     env.insert("MONO_PATH", searchPath ); // see mono_set_assemblies_path in assembly.c
+    //qDebug() << "MONO_PATH" << searchPath;
     d_proc->setProcessEnvironment(env);
     QString workDir = d_workDir;
     if( workDir.isEmpty() )

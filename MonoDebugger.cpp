@@ -669,7 +669,7 @@ QVariantList Debugger::getParamValues(quint32 threadId, quint32 frameId, bool ha
         Reply r = sendReceive(CMD_SET_STACK_FRAME, CMD_STACK_FRAME_GET_THIS,payload);
         if( !r.isOk() )
             return res;
-        if( r.d_data[0] != VALUE_TYPE_ID_NULL )
+        if( quint8(r.d_data[0]) != VALUE_TYPE_ID_NULL )
         {
             QVariant val;
             readValue(r.d_data,0,val);
@@ -1321,8 +1321,12 @@ int Debugger::processEvent( quint8 evt, const QByteArray& payload)
                 off += readUint64( payload, off, il_offset );
                 if( il_offset > std::numeric_limits<quint32>::max() )
                 {
+                    e.offset = 0;
+#if 0
+                    // this value is not used anyway and on macOS 0xffffffffff is returned by Mono3
                     e.offset = std::numeric_limits<quint32>::max();
                     qWarning() << "value exceeds maximum offset" << il_offset;
+#endif
                 }else
                     e.offset = il_offset;
             }
@@ -1415,6 +1419,7 @@ bool Debugger::error(const QString& msg)
         d_sock->close();
     qCritical() << msg;
     emit sigError(msg);
+    return false;
 }
 
 Debugger::Reply Debugger::waitForId(quint32 id)

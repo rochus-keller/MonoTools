@@ -427,7 +427,7 @@ struct MethodEntry
     void Write (QIODevice* bw)
     {
         writeUint32(bw,meth->getToken());
-        trace("meth_token", QByteArray::number(meth->getToken(),16));
+        trace("meth_token", QByteArray::number(quint32(meth->getToken()),16));
         writeUint32(bw,DataOffset);
         trace("meth_dataoffset", DataOffset);
         writeUint32(bw,LineNumberTableOffset);

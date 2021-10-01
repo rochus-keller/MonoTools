@@ -14,6 +14,7 @@ DebuggerGui::DebuggerGui():d_status(Idle),d_curThread(0),d_byteLevel(false),d_ro
 
     d_dbg = new Debugger(this);
     const quint16 port = d_dbg->open();
+    qDebug() << "debugger port" << port;
 
     d_eng = new Engine(this);
 
@@ -197,13 +198,14 @@ void DebuggerGui::onLocals()
     const bool isStatic = d_dbg->isMethodStatic(stack.first().method);
     const quint16 params = d_dbg->getParamCount(stack.first().method);
     const quint16 locals = d_dbg->getLocalsCount(stack.first().method);
-    Debugger::Values vals = d_dbg->getValues(d_curThread,stack.first().id,!isStatic,params,locals);
+    QVariantList vals = d_dbg->getParamValues(d_curThread,stack.first().id,!isStatic,params);
     qDebug() << "*** Params:";
-    for( int i = 0; i < vals.params.size(); i++ )
-        qDebug() << toString(vals.params[i]).toUtf8().constData();
+    for( int i = 0; i < vals.size(); i++ )
+        qDebug() << toString(vals[i]).toUtf8().constData();
     qDebug() << "*** Locals:";
-    for( int i = 0; i < vals.locals.size(); i++ )
-        qDebug() << toString(vals.locals[i]).toUtf8().constData();
+    vals = d_dbg->getLocalValues(d_curThread,stack.first().id,locals);
+    for( int i = 0; i < vals.size(); i++ )
+        qDebug() << toString(vals[i]).toUtf8().constData();
 
 }
 
