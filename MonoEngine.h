@@ -22,6 +22,7 @@
 
 #include <QObject>
 #include <QStringList>
+#include <QMap>
 
 typedef struct _MonoDomain MonoDomain;
 class QProcess;
@@ -38,6 +39,9 @@ namespace Mono
         void setToConsole(bool on);
         bool isRunning() const;
         QString getMonoDir();
+
+        void setEnv( const QString& name, const QString& value );
+        void removeEnv( const QString& name );
 
     public slots:
         void setMonoDir( const QString& dirPath );
@@ -68,6 +72,7 @@ namespace Mono
         QStringList d_searchPaths;
         QString d_workDir;
         QString d_monoDir;
+        QMap<QString,QString> d_env;
         bool d_toConsole;
     };
 }

@@ -72,6 +72,16 @@ QString Engine::getMonoDir()
         return d_monoDir;
 }
 
+void Engine::setEnv(const QString& name, const QString& value)
+{
+    d_env[name] = value;
+}
+
+void Engine::removeEnv(const QString& name)
+{
+    d_env.remove(name);
+}
+
 void Engine::setMonoDir(const QString& dirPath)
 {
     d_monoDir = dirPath;
@@ -178,6 +188,9 @@ void Engine::run(const QString& assembly, const QStringList& args)
     if( !searchPath.isEmpty() )
         searchPath += separator;
     searchPath += monoDir;
+    QMap<QString,QString>::const_iterator i;
+    for( i = d_env.begin(); i != d_env.end(); ++i )
+        env.insert( i.key(), i.value() );
     env.insert("MONO_PATH", searchPath ); // see mono_set_assemblies_path in assembly.c
     //qDebug() << "MONO_PATH" << searchPath;
     d_proc->setProcessEnvironment(env);

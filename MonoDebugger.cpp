@@ -1221,6 +1221,13 @@ void Debugger::onInitialSetup(bool start)
     event[2] = 0;
     sendReceive(CMD_SET_EVENT_REQUEST,CMD_EVENT_REQUEST_SET, event);
 
+#if 0
+    // doesn't work, says "not enough data available"
+    event[0] = DebuggerEvent::EXCEPTION;
+    event[1] = SUSPEND_POLICY_ALL;
+    event[2] = 0;
+    sendReceive(CMD_SET_EVENT_REQUEST,CMD_EVENT_REQUEST_SET, event);
+#endif
 
 #if 0
     // not useful
