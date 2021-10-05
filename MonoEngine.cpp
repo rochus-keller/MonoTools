@@ -126,6 +126,7 @@ void Engine::init(quint16 debugServer)
         d_args += "--debug=mdb-optimizations";
         d_args += "-O=-inline";
         d_args += "--debugger-agent=transport=dt_socket,address=localhost:" + QString::number(debugServer);
+        // d_args += "--breakonex"; doesn't seem to work
         // args += "--break";
     }
 #ifndef _MONO_ENGINE_EXT_

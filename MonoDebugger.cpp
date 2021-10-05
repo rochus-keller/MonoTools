@@ -166,7 +166,7 @@ static QByteArray writeString( const QByteArray& str )
 
 
 Debugger::Debugger(QObject *parent) : QObject(parent),d_sock(0),d_status(WaitHandshake),d_modeReq(0),d_mode(FreeRun),
-    d_breakMeth(0)
+    d_breakMeth(0),d_domain(0)
 {
     d_srv = new QTcpServer(this);
     d_srv->setMaxPendingConnections(1);
@@ -283,6 +283,39 @@ bool Debugger::clearStep()
     d_modeReq = 0;
     d_mode = FreeRun;
     return true;
+}
+
+void Debugger::enableExceptionBreaks()
+{
+#if 1
+    const quint32 coreLib = getCoreLib(d_domain);
+    if( coreLib == 0 )
+    {
+        qCritical() << "cannot retreive mscorlib";
+        return;
+    }
+    const quint32 type = findType("System.Exception", coreLib);
+    if( type == 0 )
+    {
+        qCritical() << "cannot retreive System.Exception";
+        return;
+    }
+    QByteArray event(11,0);
+    event[0] = DebuggerEvent::EXCEPTION;
+    event[1] = SUSPEND_POLICY_ALL;
+    event[2] = 1;
+    event[3] = MOD_KIND_EXCEPTION_ONLY;
+    writeUint32(event.data()+4, type);
+    event[8] = 1; // caught
+    event[9] = 0; // uncaught
+    // uncaught doesn't seem to work; also others noticed:
+    //  https://github.com/mono/mono/issues/15203 and https://github.com/mono/mono/pull/15234
+    // there fore added a top-level handler to Main# and look at each exception
+    event[10] = 1; // subclasses
+    Reply r = sendReceive(CMD_SET_EVENT_REQUEST,CMD_EVENT_REQUEST_SET, event);
+    if( !r.isOk() )
+        qCritical() << "cannot enable exception breaks";
+#endif
 }
 
 bool Debugger::stepIn(quint32 threadId, bool nextLine)
@@ -628,6 +661,11 @@ static int readValue( const QByteArray& data, int off, QVariant& val )
             off += readUint32(data,off,vt.cls);
             quint32 len;
             off += readUint32(data,off,len);
+            if( len > 100 )
+            {
+                // TODO: happens with isEnum=true, to fix
+                return off;
+            }
             for(int i = 0; i < len; i++ )
             {
                 QVariant val2;
@@ -1221,13 +1259,7 @@ void Debugger::onInitialSetup(bool start)
     event[2] = 0;
     sendReceive(CMD_SET_EVENT_REQUEST,CMD_EVENT_REQUEST_SET, event);
 
-#if 0
-    // doesn't work, says "not enough data available"
-    event[0] = DebuggerEvent::EXCEPTION;
-    event[1] = SUSPEND_POLICY_ALL;
-    event[2] = 0;
-    sendReceive(CMD_SET_EVENT_REQUEST,CMD_EVENT_REQUEST_SET, event);
-#endif
+    enableExceptionBreaks();
 
 #if 0
     // not useful
@@ -1276,6 +1308,7 @@ int Debugger::processEvent( quint8 evt, const QByteArray& payload)
             {
                 const quint32 domainId = readUint32( payload.constData() + 4 );
                 e.object = domainId;
+                d_domain = domainId;
                 onInitialSetup(true);
             }
             break;
@@ -1348,7 +1381,7 @@ int Debugger::processEvent( quint8 evt, const QByteArray& payload)
         case DebuggerEvent::EXCEPTION:
             {
                 quint32 objectId;
-                off += readUint32( payload.constData(), off, objectId );
+                off += readUint32( payload, off, objectId );
                 e.object = objectId;
             }
             break;
@@ -1400,7 +1433,6 @@ int Debugger::processEvent( quint8 evt, const QByteArray& payload)
     {
         error( tr("not enough data available") );
     }
-
     return off;
 }
 

@@ -180,6 +180,7 @@ namespace Mono
         enum RunMode { FreeRun, StepIn, StepOver, StepOut };
         bool step(quint32 threadId, RunMode, bool nextLine);
         bool clearStep();
+        void enableExceptionBreaks();
     private:
         Reply fetchReply(quint32 id);
     private:
@@ -196,6 +197,7 @@ namespace Mono
         RunMode d_mode;
         quint32 d_modeReq;
         quint32 d_breakMeth;
+        quint32 d_domain;
         QHash<QPair<quint32,quint32>,quint32> d_breakPoints; // meth,iloff->reqid
     };
 
