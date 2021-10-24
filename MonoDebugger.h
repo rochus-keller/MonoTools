@@ -210,10 +210,10 @@ namespace Mono
         ObjectRef(quint8 t = Nil, quint32 obj = 0):type(t),id(obj){}
     };
 
-    struct IntPtr
+    struct UnmanagedPtr
     {
         quint64 ptr;
-        IntPtr(quint64 p = 0):ptr(p) {}
+        UnmanagedPtr(quint64 p = 0):ptr(p) {}
     };
 
     struct ValueType
@@ -224,7 +224,7 @@ namespace Mono
 }
 
 Q_DECLARE_METATYPE(Mono::ObjectRef)
-Q_DECLARE_METATYPE(Mono::IntPtr)
+Q_DECLARE_METATYPE(Mono::UnmanagedPtr)
 Q_DECLARE_METATYPE(Mono::ValueType)
 
 #endif // MONODEBUGGER_H

@@ -82,13 +82,18 @@ static inline const char* toString(int e)
     }
 }
 
+static inline quint32 readUint32( const char* buf )
+{
+    return (((quint8)buf[0]) << 24) | (((quint8)buf[1]) << 16) |
+            (((quint8)buf[2]) << 8) | (((quint8)buf[3]) << 0);
+
+}
+
 static inline quint64 readUint64( const char* buf )
 {
-    return (((quint8)buf[0]) << 56) | (((quint8)buf[1]) << 48) |
-            (((quint8)buf[2]) << 40) | (((quint8)buf[3]) << 32) |
-            (((quint8)buf[4]) << 24) | (((quint8)buf[5]) << 16) |
-            (((quint8)buf[6]) << 8) | (((quint8)buf[7]) << 0);
-
+    const quint64 h = readUint32(buf);
+    const quint64 l = readUint32(buf+4);
+    return ( h << 32 ) | l;
 }
 
 static inline int readUint64( const QByteArray& buf, int off, quint64& res )
@@ -97,13 +102,6 @@ static inline int readUint64( const QByteArray& buf, int off, quint64& res )
         throw 0;
     res = readUint64( buf.constData() + off );
     return 8;
-}
-
-static inline quint32 readUint32( const char* buf )
-{
-    return (((quint8)buf[0]) << 24) | (((quint8)buf[1]) << 16) |
-            (((quint8)buf[2]) << 8) | (((quint8)buf[3]) << 0);
-
 }
 
 static int readUint32( const QByteArray& buf, int off, quint32& res )
@@ -570,13 +568,13 @@ QList<Debugger::Frame> Debugger::getStack(quint32 threadId)
     return res;
 }
 
-static int readValue( const QByteArray& data, int off, QVariant& val )
+static int readValue( const QByteArray& data, int start, QVariant& val )
 {
     Q_ASSERT( !data.isEmpty() );
     quint32 i;
     quint64 l;
-    quint8 type = (quint8)data[off];
-    const char* d = data.constData()+1+off;
+    quint8 type = (quint8)data[start];
+    const char* d = data.constData()+start+1;
     switch( type )
     {
     case VT_Void:
@@ -589,16 +587,16 @@ static int readValue( const QByteArray& data, int off, QVariant& val )
         val = QChar(readUint32(d));
         return 5;
     case VT_I1:
-        val = qint8(int(readUint32(d)));
+        val = QVariant::fromValue(qint8(int(readUint32(d))));
         return 5;
     case VT_U1:
-        val = quint8(readUint32(d));
+        val = QVariant::fromValue(quint8(readUint32(d)));
         return 5;
     case VT_I2:
-        val = qint16(int(readUint32(d)));
+        val = QVariant::fromValue(qint16(int(readUint32(d))));
         return 5;
     case VT_U2:
-        val = quint16(readUint32(d));
+        val = QVariant::fromValue(quint16(readUint32(d)));
         return 5;
     case VT_I4:
         val = int(readUint32(d));
@@ -614,14 +612,14 @@ static int readValue( const QByteArray& data, int off, QVariant& val )
         return 9;
     case VT_R4:
         i = readUint32(d);
-        val = *((float*)&i);
+        val = QVariant::fromValue(*((float*)&i));
         return 5;
     case VT_R8:
         l = readUint64(d);
         val = *((double*)&l);
         return 9;
     case VT_Ptr:
-        val = QVariant::fromValue(IntPtr(readUint64(d)));
+        val = QVariant::fromValue(UnmanagedPtr(readUint64(d)));
         return 9;
     case VT_U:
         val = readUint64(d);
@@ -655,7 +653,7 @@ static int readValue( const QByteArray& data, int off, QVariant& val )
         return 5;
     case VT_ValueType:
         {
-            int off = 1; // type above
+            int off = start + 1; // type 1 byte already read
             const bool isEnum = data[off++] != 0;
             ValueType vt;
             off += readUint32(data,off,vt.cls);
@@ -664,15 +662,16 @@ static int readValue( const QByteArray& data, int off, QVariant& val )
             if( len > 100 )
             {
                 // TODO: happens with isEnum=true, to fix
-                return off;
+                return off - start;
             }
-            for(int i = 0; i < len; i++ )
+            for(int j = 0; j < len; j++ )
             {
                 QVariant val2;
                 off += readValue(data,off, val2);
                 vt.fields.append(val2);
             }
-            return off;
+            val = QVariant::fromValue(vt);
+            return off - start;
         }
         break;
     case VT_ByRef:
@@ -757,6 +756,7 @@ QVariantList Debugger::getLocalValues(quint32 threadId, quint32 frameId, quint16
     if( !r.isOk() )
         return res;
     off = 0;
+    //qDebug() << "payload" << r.d_data.toHex().constData(); // TEST
     for( int i = 0; i < numOfLocals; i++ )
     {
         QVariant val;
@@ -1083,8 +1083,10 @@ QList<Debugger::FieldInfo> Debugger::getFields(quint32 typeId, bool instanceLeve
             quint32 attrs;
             off += readUint32(r.d_data,off,attrs);
             const bool isStatic = attrs & FIELD_ATTRIBUTE_STATIC;
+#if 0
             if( isStatic )
                 qDebug() << "static field" << field.name;
+#endif
             if( ( instanceLevel && !isStatic ) || ( classLevel && isStatic ) )
                 res << field;
         }
