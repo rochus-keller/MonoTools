@@ -200,6 +200,8 @@ void Engine::run(const QString& assembly, const QStringList& args)
         workDir = monoDir;
     d_proc->setWorkingDirectory(workDir);
     d_proc->setProgram( QDir(monoDir).absoluteFilePath("mono"));
+    if( !d_inputFile.isEmpty() )
+        d_proc->setStandardInputFile(d_inputFile);
     connect(d_proc,SIGNAL(error(QProcess::ProcessError)),this,SLOT(onProcError()));
     connect(d_proc,SIGNAL(stateChanged(QProcess::ProcessState)),this,SLOT(onProcState()) );
     connect(d_proc,SIGNAL(readyReadStandardError()),this,SLOT(onStdErr()) );
@@ -224,6 +226,20 @@ void Engine::finish()
     d_proc->terminate();
     d_proc->waitForFinished();
 #endif
+}
+
+bool Engine::write(const QByteArray& data)
+{
+    if( !d_running )
+        return false;
+    Q_ASSERT( d_proc );
+    d_proc->write(data);
+    return true;
+}
+
+void Engine::setInputFile(const QString& path)
+{
+    d_inputFile = path;
 }
 
 void Engine::onProcError()

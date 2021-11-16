@@ -50,6 +50,8 @@ namespace Mono
         void init(quint16 debugServer = 0);
         void run(const QString& assembly, const QStringList& args = QStringList() );
         void finish();
+        bool write( const QByteArray& );
+        void setInputFile( const QString& );
 
     signals:
         void onError( const QString& );
@@ -72,6 +74,7 @@ namespace Mono
         QStringList d_searchPaths;
         QString d_workDir;
         QString d_monoDir;
+        QString d_inputFile;
         QMap<QString,QString> d_env;
         bool d_toConsole;
     };
