@@ -164,7 +164,7 @@ static QByteArray writeString( const QByteArray& str )
 
 
 Debugger::Debugger(QObject *parent) : QObject(parent),d_sock(0),d_status(WaitHandshake),d_modeReq(0),d_mode(FreeRun),
-    d_breakMeth(0),d_domain(0)
+    d_breakMeth(0),d_domain(0),d_lineStep(true)
 {
     d_srv = new QTcpServer(this);
     d_srv->setMaxPendingConnections(1);
@@ -228,11 +228,12 @@ bool Debugger::exit()
     // VM DISPOSE doesn't do anything useful
 }
 
-bool Debugger::step(quint32 threadId, Debugger::RunMode mode, bool nextLine)
+bool Debugger::step(quint32 threadId, Debugger::RunMode mode, bool lineStep)
 {
     if( !isOpen() )
         return false;
-    if( d_mode == mode )
+
+    if( d_mode == mode && d_lineStep == lineStep )
         return sendReceive(CMD_SET_VM,CMD_VM_RESUME).isOk();
 
     // else
@@ -245,7 +246,7 @@ bool Debugger::step(quint32 threadId, Debugger::RunMode mode, bool nextLine)
     d[2] = 1;
     d[3] = MOD_KIND_STEP;
     writeUint32(d+4,threadId);
-    writeUint32(d+8, nextLine ? STEP_SIZE_LINE : STEP_SIZE_MIN );
+    writeUint32(d+8, lineStep ? STEP_SIZE_LINE : STEP_SIZE_MIN );
     switch( mode )
     {
     case StepIn:
@@ -263,6 +264,7 @@ bool Debugger::step(quint32 threadId, Debugger::RunMode mode, bool nextLine)
     if( r.isOk() )
     {
         d_mode = mode;
+        d_lineStep = lineStep;
         d_modeReq = readUint32(r.d_data);
         return sendReceive(CMD_SET_VM,CMD_VM_RESUME).isOk();
     }
@@ -316,19 +318,19 @@ void Debugger::enableExceptionBreaks()
 #endif
 }
 
-bool Debugger::stepIn(quint32 threadId, bool nextLine)
+bool Debugger::stepIn(quint32 threadId, bool lineStep)
 {
-    return step(threadId,StepIn,nextLine);
+    return step(threadId,StepIn,lineStep);
 }
 
-bool Debugger::stepOver(quint32 threadId, bool nextLine)
+bool Debugger::stepOver(quint32 threadId, bool lineStep)
 {
-    return step(threadId,StepOver,nextLine);
+    return step(threadId,StepOver,lineStep);
 }
 
-bool Debugger::stepOut(quint32 threadId, bool nextLine)
+bool Debugger::stepOut(quint32 threadId, bool lineStep)
 {
-    return step(threadId,StepOut,nextLine);
+    return step(threadId,StepOut,lineStep);
 }
 
 bool Debugger::enableUserBreak()

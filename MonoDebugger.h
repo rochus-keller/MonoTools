@@ -60,9 +60,9 @@ namespace Mono
         bool isOpen() const;
 
         bool resume();
-        bool stepIn(quint32 threadId, bool nextLine = false);
-        bool stepOver(quint32 threadId, bool nextLine = false);
-        bool stepOut(quint32 threadId, bool nextLine = false);
+        bool stepIn(quint32 threadId, bool lineStep = false);
+        bool stepOver(quint32 threadId, bool lineStep = false);
+        bool stepOut(quint32 threadId, bool lineStep = false);
         bool suspend();
         bool exit();
 
@@ -178,7 +178,7 @@ namespace Mono
         Reply sendReceive(quint8 cmdSet, quint8 cmd, const QByteArray& payload = QByteArray());
         QPair<int,int> vmGetVersion();
         enum RunMode { FreeRun, StepIn, StepOver, StepOut };
-        bool step(quint32 threadId, RunMode, bool nextLine);
+        bool step(quint32 threadId, RunMode, bool lineStep);
         bool clearStep();
         void enableExceptionBreaks();
     private:
@@ -195,6 +195,7 @@ namespace Mono
         typedef QHash<quint32,Packet> Replies;
         Replies d_replies; // id -> result_code,
         RunMode d_mode;
+        bool d_lineStep;
         quint32 d_modeReq;
         quint32 d_breakMeth;
         quint32 d_domain;
