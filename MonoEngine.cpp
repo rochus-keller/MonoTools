@@ -193,20 +193,21 @@ void Engine::run(const QString& assembly, const QStringList& args)
     for( i = d_env.begin(); i != d_env.end(); ++i )
         env.insert( i.key(), i.value() );
     env.insert("MONO_PATH", searchPath ); // see mono_set_assemblies_path in assembly.c
-    //qDebug() << "MONO_PATH" << searchPath;
+    QDir dir(monoDir);
+    if( QFileInfo(dir.absoluteFilePath("config")).exists() )
+        env.insert("MONO_CONFIG", dir.absoluteFilePath("config"));
     d_proc->setProcessEnvironment(env);
     QString workDir = d_workDir;
     if( workDir.isEmpty() )
         workDir = monoDir;
     d_proc->setWorkingDirectory(workDir);
-    d_proc->setProgram( QDir(monoDir).absoluteFilePath("mono"));
+    d_proc->setProgram( dir.absoluteFilePath("mono"));
     if( !d_inputFile.isEmpty() )
         d_proc->setStandardInputFile(d_inputFile);
     connect(d_proc,SIGNAL(error(QProcess::ProcessError)),this,SLOT(onProcError()));
     connect(d_proc,SIGNAL(stateChanged(QProcess::ProcessState)),this,SLOT(onProcState()) );
     connect(d_proc,SIGNAL(readyReadStandardError()),this,SLOT(onStdErr()) );
     connect(d_proc,SIGNAL(readyReadStandardOutput()),this,SLOT(onStdOut()) );
-    //qDebug() << "starting" << d_proc->program() << pargs.join(' ');
     d_proc->start();
 
 #endif
